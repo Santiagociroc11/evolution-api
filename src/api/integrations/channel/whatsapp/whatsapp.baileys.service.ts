@@ -1048,9 +1048,20 @@ export class BaileysStartupService extends ChannelStartupService {
     ) => {
       try {
         for (const received of messages) {
+          // 🔍 LOG DEL PROCESAMIENTO DE CADA MENSAJE
+          console.log('📝 [PROCESSING] Procesando mensaje individual:');
+          console.log('📝 [PROCESSING] remoteJid original:', received.key.remoteJid);
+          console.log('📝 [PROCESSING] senderPn:', received.key.senderPn);
+          console.log('📝 [PROCESSING] ¿Contiene @lid?:', received.key.remoteJid?.includes('@lid'));
+          console.log('📝 [PROCESSING] ¿Existe senderPn?:', !!received.key.senderPn);
+
           if (received.key.remoteJid?.includes('@lid') && received.key.senderPn) {
+            console.log('✅ [PROCESSING] Reemplazando @lid con senderPn');
             (received.key as { previousRemoteJid?: string | null }).previousRemoteJid = received.key.remoteJid;
             received.key.remoteJid = received.key.senderPn;
+            console.log('✅ [PROCESSING] Nuevo remoteJid:', received.key.remoteJid);
+          } else {
+            console.log('❌ [PROCESSING] NO se reemplazó @lid - senderPn no existe');
           }
           if (
             received?.messageStubParameters?.some?.((param) =>
@@ -1333,6 +1344,11 @@ export class BaileysStartupService extends ChannelStartupService {
           }
 
           this.logger.log(messageRaw);
+
+          // 🔍 LOG DEL MENSAJE QUE SE ENVÍA AL WEBSOCKET
+          console.log('📤 [WEBSOCKET] Mensaje enviado al WebSocket:');
+          console.log('📤 [WEBSOCKET] remoteJid final:', messageRaw.key.remoteJid);
+          console.log('📤 [WEBSOCKET] ¿Contiene @lid?:', messageRaw.key.remoteJid?.includes('@lid'));
 
           this.sendDataWebhook(Events.MESSAGES_UPSERT, messageRaw);
 
@@ -1663,6 +1679,12 @@ export class BaileysStartupService extends ChannelStartupService {
 
         if (events['messages.upsert']) {
           const payload = events['messages.upsert'];
+
+          // 🔍 LOG COMPLETO DEL MENSAJE RECIBIDO DE BAILEYS
+          console.log('🚀 [BAILEYS] Mensaje RECIBIDO completo:', JSON.stringify(payload, null, 2));
+          console.log('🔍 [BAILEYS] remoteJid:', payload.messages?.[0]?.key?.remoteJid);
+          console.log('🔍 [BAILEYS] senderPn:', payload.messages?.[0]?.key?.senderPn);
+          console.log('🔍 [BAILEYS] fromMe:', payload.messages?.[0]?.key?.fromMe);
 
           this.messageProcessor.processMessage(payload, settings);
           // this.messageHandle['messages.upsert'](payload, settings);
