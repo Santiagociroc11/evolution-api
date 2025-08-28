@@ -564,6 +564,48 @@ export class BaileysStartupService extends ChannelStartupService {
 
     this.logger.info(log);
 
+    // 🔍 LOG ADICIONAL PARA CONFIRMAR LA VERSIÓN DE BAILEYS INSTALADA
+    try {
+      // Método 1: Información del package.json
+      const baileysPackagePath = require.resolve('baileys/package.json');
+      const baileysPackage = require(baileysPackagePath);
+      console.log('📦 [BAILEYS INFO] Package version:', baileysPackage.version);
+      console.log('📦 [BAILEYS INFO] Package name:', baileysPackage.name);
+      
+      // Método 2: Información de la librería importada
+      const baileysLib = require('baileys');
+      console.log('📚 [BAILEYS INFO] Librería importada correctamente');
+      
+      // Método 3: Verificar propiedades específicas de la librería
+      if (baileysLib.makeWASocket) {
+        console.log('✅ [BAILEYS INFO] makeWASocket disponible');
+      }
+      if (baileysLib.proto) {
+        console.log('✅ [BAILEYS INFO] proto disponible');
+      }
+      
+      // Método 4: Verificar si tiene campos específicos para @lid
+      const hasLidSupport = baileysLib.proto && baileysLib.proto.WebMessageInfo;
+      console.log('🔍 [BAILEYS INFO] ¿Tiene soporte para proto?:', !!hasLidSupport);
+      
+      // Método 5: Información del directorio de instalación
+      const baileysDir = require.resolve('baileys').replace('/lib/index.js', '');
+      console.log('📁 [BAILEYS INFO] Directorio instalado:', baileysDir);
+      
+      // Método 6: Verificar archivos específicos
+      const fs = require('fs');
+      const packageJsonPath = `${baileysDir}/package.json`;
+      if (fs.existsSync(packageJsonPath)) {
+        const packageContent = fs.readFileSync(packageJsonPath, 'utf8');
+        const packageData = JSON.parse(packageContent);
+        console.log('📋 [BAILEYS INFO] Versión del package.json:', packageData.version);
+        console.log('📋 [BAILEYS INFO] Homepage:', packageData.homepage);
+      }
+      
+    } catch (error) {
+      console.log('❌ [BAILEYS INFO] Error obteniendo info del package:', error.message);
+    }
+
     this.logger.info(`Group Ignore: ${this.localSettings.groupsIgnore}`);
 
     let options;
