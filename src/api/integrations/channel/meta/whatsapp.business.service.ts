@@ -1003,8 +1003,6 @@ export class BusinessStartupService extends ChannelStartupService {
           return await this.post(content, 'messages');
         }
         if (message['media']) {
-          const isImage = message['mimetype']?.startsWith('image/');
-
           content = {
             messaging_product: 'whatsapp',
             recipient_type: 'individual',
@@ -1012,9 +1010,7 @@ export class BusinessStartupService extends ChannelStartupService {
             to: number.replace(/\D/g, ''),
             [message['mediaType']]: {
               [message['type']]: message['id'],
-              ...(message['mediaType'] !== 'audio' &&
-                message['fileName'] &&
-                !isImage && { filename: message['fileName'] }),
+              ...(message['mediaType'] === 'document' && message['fileName'] && { filename: message['fileName'] }),
               ...(message['mediaType'] !== 'audio' && message['caption'] && { caption: message['caption'] }),
             },
           };
