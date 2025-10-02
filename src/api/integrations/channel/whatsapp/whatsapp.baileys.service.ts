@@ -29,6 +29,19 @@ import {
   GroupUpdateParticipantDto,
   GroupUpdateSettingDto,
 } from '@api/dto/group.dto';
+import {
+  CreateCommunityDto,
+  CreateCommunityGroupDto,
+  CommunityParticipantsUpdateDto,
+  CommunityPictureDto,
+  CommunitySettingUpdateDto,
+  CommunityMemberAddModeDto,
+  CommunityJid,
+  CommunityGroupJid,
+  CommunityInviteDto,
+  CommunityAcceptInviteDto,
+  CommunitySendInviteDto,
+} from '@api/dto/community.dto';
 import { InstanceDto, SetPresenceDto } from '@api/dto/instance.dto';
 import { HandleLabelDto, LabelDto } from '@api/dto/label.dto';
 import {
@@ -4845,5 +4858,315 @@ export class BaileysStartupService extends ChannelStartupService {
         records: formattedMessages,
       },
     };
+  }
+
+  // ==========================================
+  // MÉTODOS DE COMUNIDADES WHATSAPP
+  // ==========================================
+
+  /**
+   * Crear una nueva comunidad de WhatsApp
+   */
+  public async createCommunity(create: CreateCommunityDto) {
+    try {
+      const { id } = await this.client.communityCreate(create.subject, create.description);
+      
+      const community = await this.client.groupMetadata(id);
+      
+      // Generar automáticamente el código de invitación
+      let inviteCode = null;
+      try {
+        inviteCode = await this.client.groupInviteCode(id);
+      } catch (inviteError) {
+        this.logger.warn('Could not generate invite code for community:', inviteError);
+        // No lanzamos error aquí, solo registramos la advertencia
+      }
+      
+      return {
+        id: community.id,
+        subject: community.subject,
+        description: community.description,
+        isCommunity: community.isCommunity,
+        isCommunityAnnounce: community.isCommunityAnnounce,
+        participants: community.participants,
+        owner: community.owner,
+        creation: community.creation,
+        restrict: community.restrict,
+        announce: community.announce,
+        linkedParent: community.linkedParent,
+        inviteCode: inviteCode,
+        inviteLink: inviteCode ? `https://chat.whatsapp.com/${inviteCode}` : null,
+      };
+    } catch (error) {
+      this.logger.error('Error creating community:', error);
+      throw new InternalServerErrorException('Error creating community', error.toString());
+    }
+  }
+
+  /**
+   * Crear un grupo dentro de una comunidad
+   */
+  public async createCommunityGroup(create: CreateCommunityGroupDto) {
+    try {
+      const participants = (await this.whatsappNumber({ numbers: create.participants }))
+        .filter((participant) => participant.exists)
+        .map((participant) => participant.jid);
+
+      const { id } = await this.client.communityCreateGroup(
+        create.subject, 
+        participants, 
+        create.parentCommunityJid
+      );
+
+      const group = await this.client.groupMetadata(id);
+
+      // Generar automáticamente el código de invitación para el grupo
+      let inviteCode = null;
+      try {
+        inviteCode = await this.client.groupInviteCode(id);
+      } catch (inviteError) {
+        this.logger.warn('Could not generate invite code for community group:', inviteError);
+        // No lanzamos error aquí, solo registramos la advertencia
+      }
+
+      return {
+        id: group.id,
+        subject: group.subject,
+        description: group.description,
+        isCommunity: group.isCommunity,
+        isCommunityAnnounce: group.isCommunityAnnounce,
+        participants: group.participants,
+        owner: group.owner,
+        creation: group.creation,
+        restrict: group.restrict,
+        announce: group.announce,
+        linkedParent: group.linkedParent,
+        inviteCode: inviteCode,
+        inviteLink: inviteCode ? `https://chat.whatsapp.com/${inviteCode}` : null,
+      };
+    } catch (error) {
+      this.logger.error('Error creating community group:', error);
+      throw new InternalServerErrorException('Error creating community group', error.toString());
+    }
+  }
+
+  /**
+   * Actualizar participantes de una comunidad (promover, degradar, agregar, remover)
+   */
+  public async communityParticipantsUpdate(update: CommunityParticipantsUpdateDto) {
+    try {
+      const participants = (await this.whatsappNumber({ numbers: update.participants }))
+        .filter((participant) => participant.exists)
+        .map((participant) => participant.jid);
+
+      const result = await this.client.communityParticipantsUpdate(
+        update.communityJid,
+        participants,
+        update.action
+      );
+
+      return result;
+    } catch (error) {
+      this.logger.error('Error updating community participants:', error);
+      throw new InternalServerErrorException('Error updating community participants', error.toString());
+    }
+  }
+
+  /**
+   * Actualizar foto de la comunidad
+   */
+  public async updateCommunityPicture(picture: CommunityPictureDto) {
+    try {
+      const imageBuffer = Buffer.from(picture.image.split(',')[1], 'base64');
+      
+      await this.client.updateProfilePicture(picture.communityJid, imageBuffer);
+
+      return { success: true, message: 'Community picture updated successfully' };
+    } catch (error) {
+      this.logger.error('Error updating community picture:', error);
+      throw new InternalServerErrorException('Error updating community picture', error.toString());
+    }
+  }
+
+  /**
+   * Actualizar configuración de la comunidad (anuncios)
+   */
+  public async communitySettingUpdate(setting: CommunitySettingUpdateDto) {
+    try {
+      await this.client.communitySettingUpdate(setting.communityJid, setting.setting);
+
+      return { success: true, message: 'Community setting updated successfully' };
+    } catch (error) {
+      this.logger.error('Error updating community setting:', error);
+      throw new InternalServerErrorException('Error updating community setting', error.toString());
+    }
+  }
+
+  /**
+   * Configurar modo de agregar miembros a la comunidad
+   */
+  public async communityMemberAddMode(mode: CommunityMemberAddModeDto) {
+    try {
+      await this.client.communityMemberAddMode(mode.communityJid, mode.mode);
+
+      return { success: true, message: 'Community member add mode updated successfully' };
+    } catch (error) {
+      this.logger.error('Error updating community member add mode:', error);
+      throw new InternalServerErrorException('Error updating community member add mode', error.toString());
+    }
+  }
+
+  /**
+   * Obtener información de una comunidad
+   */
+  public async getCommunity(community: CommunityJid) {
+    try {
+      const communityData = await this.client.groupMetadata(community.communityJid);
+
+      return {
+        id: communityData.id,
+        subject: communityData.subject,
+        description: communityData.description,
+        isCommunity: communityData.isCommunity,
+        isCommunityAnnounce: communityData.isCommunityAnnounce,
+        participants: communityData.participants,
+        owner: communityData.owner,
+        creation: communityData.creation,
+        restrict: communityData.restrict,
+        announce: communityData.announce,
+        linkedParent: communityData.linkedParent,
+      };
+    } catch (error) {
+      this.logger.error('Error getting community:', error);
+      throw new InternalServerErrorException('Error getting community', error.toString());
+    }
+  }
+
+  /**
+   * Obtener grupos de una comunidad
+   */
+  public async getCommunityGroups(community: CommunityJid) {
+    try {
+      const groups = await this.client.communityGroups(community.communityJid);
+
+      return groups.map(group => ({
+        id: group.id,
+        subject: group.subject,
+        description: group.description,
+        isCommunity: group.isCommunity,
+        isCommunityAnnounce: group.isCommunityAnnounce,
+        participants: group.participants,
+        owner: group.owner,
+        creation: group.creation,
+        restrict: group.restrict,
+        announce: group.announce,
+        linkedParent: group.linkedParent,
+      }));
+    } catch (error) {
+      this.logger.error('Error getting community groups:', error);
+      throw new InternalServerErrorException('Error getting community groups', error.toString());
+    }
+  }
+
+  /**
+   * Generar código de invitación para la comunidad
+   */
+  public async generateCommunityInvite(community: CommunityJid) {
+    try {
+      const inviteCode = await this.client.groupInviteCode(community.communityJid);
+
+      return { inviteCode };
+    } catch (error) {
+      this.logger.error('Error generating community invite:', error);
+      throw new InternalServerErrorException('Error generating community invite', error.toString());
+    }
+  }
+
+  /**
+   * Revocar código de invitación de la comunidad
+   */
+  public async revokeCommunityInvite(community: CommunityJid) {
+    try {
+      await this.client.groupRevokeInvite(community.communityJid);
+
+      return { success: true, message: 'Community invite revoked successfully' };
+    } catch (error) {
+      this.logger.error('Error revoking community invite:', error);
+      throw new InternalServerErrorException('Error revoking community invite', error.toString());
+    }
+  }
+
+  /**
+   * Aceptar invitación a comunidad
+   */
+  public async acceptCommunityInvite(invite: CommunityAcceptInviteDto) {
+    try {
+      const result = await this.client.groupAcceptInvite(invite.inviteCode);
+
+      return { success: true, communityId: result };
+    } catch (error) {
+      this.logger.error('Error accepting community invite:', error);
+      throw new InternalServerErrorException('Error accepting community invite', error.toString());
+    }
+  }
+
+  /**
+   * Enviar invitación a comunidad por número
+   */
+  public async sendCommunityInvite(invite: CommunitySendInviteDto) {
+    try {
+      const numbers = (await this.whatsappNumber({ numbers: invite.numbers }))
+        .filter((participant) => participant.exists)
+        .map((participant) => participant.jid);
+
+      await this.client.groupSendInvite(invite.communityJid, invite.description, numbers);
+
+      return { success: true, message: 'Community invites sent successfully' };
+    } catch (error) {
+      this.logger.error('Error sending community invites:', error);
+      throw new InternalServerErrorException('Error sending community invites', error.toString());
+    }
+  }
+
+  /**
+   * Eliminar grupo de la comunidad
+   */
+  public async deleteCommunityGroup(group: CommunityGroupJid) {
+    try {
+      await this.client.groupDelete(group.communityJid, group.groupJid);
+
+      return { success: true, message: 'Community group deleted successfully' };
+    } catch (error) {
+      this.logger.error('Error deleting community group:', error);
+      throw new InternalServerErrorException('Error deleting community group', error.toString());
+    }
+  }
+
+  /**
+   * Actualizar descripción de la comunidad
+   */
+  public async updateCommunityDescription(description: { communityJid: string; description: string }) {
+    try {
+      await this.client.groupUpdateDescription(description.communityJid, description.description);
+
+      return { success: true, message: 'Community description updated successfully' };
+    } catch (error) {
+      this.logger.error('Error updating community description:', error);
+      throw new InternalServerErrorException('Error updating community description', error.toString());
+    }
+  }
+
+  /**
+   * Actualizar nombre de la comunidad
+   */
+  public async updateCommunitySubject(subject: { communityJid: string; subject: string }) {
+    try {
+      await this.client.groupUpdateSubject(subject.communityJid, subject.subject);
+
+      return { success: true, message: 'Community subject updated successfully' };
+    } catch (error) {
+      this.logger.error('Error updating community subject:', error);
+      throw new InternalServerErrorException('Error updating community subject', error.toString());
+    }
   }
 }
