@@ -232,6 +232,18 @@ export class WebhookController extends EventController implements EventControlle
         attempts++;
 
         const isTimeout = error.code === 'ECONNABORTED';
+        const isRateLimited = error?.response?.status === 429;
+
+        // Tratamento específico para rate limiting (429)
+        if (isRateLimited) {
+          this.logger.warn({
+            local: `${origin}`,
+            message: `Rate limiting detectado (429). Aplicando backoff exponencial mais agressivo.`,
+            statusCode: 429,
+            url: baseURL,
+            server_url: serverUrl,
+          });
+        }
 
         if (error?.response?.status && nonRetryableStatusCodes.includes(error.response.status)) {
           this.logger.error({
@@ -265,7 +277,9 @@ export class WebhookController extends EventController implements EventControlle
 
         let nextDelay = initialDelay;
         if (useExponentialBackoff) {
-          nextDelay = Math.min(initialDelay * Math.pow(2, attempts - 1), maxDelay);
+          // Backoff mais agressivo para rate limiting
+          const backoffMultiplier = isRateLimited ? 3 : 2;
+          nextDelay = Math.min(initialDelay * Math.pow(backoffMultiplier, attempts - 1), maxDelay);
 
           const jitter = nextDelay * jitterFactor * (Math.random() * 2 - 1);
           nextDelay = Math.max(initialDelay, nextDelay + jitter);
