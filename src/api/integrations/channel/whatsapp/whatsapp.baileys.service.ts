@@ -1505,11 +1505,11 @@ export class BaileysStartupService extends ChannelStartupService {
             this.sendDataWebhook(Events.MESSAGES_DELETE, key);
 
             if (this.configService.get<Database>('DATABASE').SAVE_DATA.MESSAGE_UPDATE && findMessage?.id) {
-              await this.prismaRepository.messageUpdate.create({ 
+              await this.prismaRepository.messageUpdate.create({
                 data: {
                   ...message,
-                  messageId: findMessage.id
-                }
+                  messageId: findMessage.id,
+                },
               });
             }
 
@@ -1557,11 +1557,11 @@ export class BaileysStartupService extends ChannelStartupService {
           this.sendDataWebhook(Events.MESSAGES_UPDATE, message);
 
           if (this.configService.get<Database>('DATABASE').SAVE_DATA.MESSAGE_UPDATE && findMessage?.id) {
-            await this.prismaRepository.messageUpdate.create({ 
+            await this.prismaRepository.messageUpdate.create({
               data: {
                 ...message,
-                messageId: findMessage.id
-              }
+                messageId: findMessage.id,
+              },
             });
           }
 

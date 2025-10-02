@@ -83,7 +83,7 @@ export class BusinessStartupService extends ChannelStartupService {
         thumbnailUrl: message.referral.image_url,
         sourceUrl: message.referral.source_url,
         sourceId: message.referral.source_id,
-        ctwaClid: message.referral.ctwa_clid
+        ctwaClid: message.referral.ctwa_clid,
       };
 
       if (content.contextInfo) {
