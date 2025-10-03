@@ -4855,4 +4855,121 @@ export class BaileysStartupService extends ChannelStartupService {
       },
     };
   }
+
+  // ==================== COMMUNITY FUNCTIONS ====================
+
+  public async communityMetadata(jid: string) {
+    const response = await this.client.communityMetadata(jid);
+    return response;
+  }
+
+  public async communityCreate(subject: string, body: string) {
+    const response = await this.client.communityCreate(subject, body);
+    return response;
+  }
+
+  public async communityCreateGroup(subject: string, participants: string[], parentCommunityJid: string) {
+    const response = await this.client.communityCreateGroup(subject, participants, parentCommunityJid);
+    return response;
+  }
+
+  public async communityLeave(jid: string) {
+    await this.client.communityLeave(jid);
+    return { success: true };
+  }
+
+  public async communityUpdateSubject(jid: string, subject: string) {
+    await this.client.communityUpdateSubject(jid, subject);
+    return { success: true };
+  }
+
+  public async communityLinkGroup(groupJid: string, parentCommunityJid: string) {
+    await this.client.communityLinkGroup(groupJid, parentCommunityJid);
+    return { success: true };
+  }
+
+  public async communityUnlinkGroup(groupJid: string, parentCommunityJid: string) {
+    await this.client.communityUnlinkGroup(groupJid, parentCommunityJid);
+    return { success: true };
+  }
+
+  public async communityFetchLinkedGroups(jid: string) {
+    const response = await this.client.communityFetchLinkedGroups(jid);
+    return response;
+  }
+
+  public async communityRequestParticipantsList(jid: string) {
+    const response = await this.client.communityRequestParticipantsList(jid);
+    return response;
+  }
+
+  public async communityRequestParticipantsUpdate(jid: string, participants: string[], action: 'approve' | 'reject') {
+    const response = await this.client.communityRequestParticipantsUpdate(jid, participants, action);
+    return response;
+  }
+
+  public async communityParticipantsUpdate(jid: string, participants: string[], action: 'add' | 'remove' | 'promote' | 'demote') {
+    const response = await this.client.communityParticipantsUpdate(jid, participants, action);
+    return response;
+  }
+
+  public async communityUpdateDescription(jid: string, description?: string) {
+    await this.client.communityUpdateDescription(jid, description);
+    return { success: true };
+  }
+
+  public async communityInviteCode(jid: string) {
+    const response = await this.client.communityInviteCode(jid);
+    return { inviteCode: response };
+  }
+
+  public async communityRevokeInvite(jid: string) {
+    const response = await this.client.communityRevokeInvite(jid);
+    return { inviteCode: response };
+  }
+
+  public async communityAcceptInvite(code: string) {
+    const response = await this.client.communityAcceptInvite(code);
+    return { jid: response };
+  }
+
+  public async communityRevokeInviteV4(communityJid: string, invitedJid: string) {
+    const response = await this.client.communityRevokeInviteV4(communityJid, invitedJid);
+    return { success: response };
+  }
+
+  public async communityAcceptInviteV4(key: string, inviteMessage: any) {
+    const response = await this.client.communityAcceptInviteV4(key, inviteMessage);
+    return response;
+  }
+
+  public async communityGetInviteInfo(code: string) {
+    const response = await this.client.communityGetInviteInfo(code);
+    return response;
+  }
+
+  public async communityToggleEphemeral(jid: string, ephemeralExpiration: number) {
+    await this.client.communityToggleEphemeral(jid, ephemeralExpiration);
+    return { success: true };
+  }
+
+  public async communitySettingUpdate(jid: string, setting: 'announcement' | 'not_announcement' | 'locked' | 'unlocked') {
+    await this.client.communitySettingUpdate(jid, setting);
+    return { success: true };
+  }
+
+  public async communityMemberAddMode(jid: string, mode: 'admin_add' | 'all_member_add') {
+    await this.client.communityMemberAddMode(jid, mode);
+    return { success: true };
+  }
+
+  public async communityJoinApprovalMode(jid: string, mode: 'on' | 'off') {
+    await this.client.communityJoinApprovalMode(jid, mode);
+    return { success: true };
+  }
+
+  public async communityFetchAllParticipating() {
+    const response = await this.client.communityFetchAllParticipating();
+    return response;
+  }
 }
