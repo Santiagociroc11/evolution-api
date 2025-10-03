@@ -3379,9 +3379,12 @@ export class BaileysStartupService extends ChannelStartupService {
           }
 
           const numberJid = numberVerified?.jid || user.jid;
-          const lid = numberJid.includes('@lid')
-            ? numberJid.split('@')[1]
-            : undefined;
+          const lid =
+            typeof numberVerified?.lid === 'string'
+              ? numberVerified.lid
+              : numberJid.includes('@lid')
+                ? numberJid.split('@')[1]
+                : undefined;
           return new OnWhatsAppDto(
             numberJid,
             !!numberVerified?.exists,
@@ -4571,7 +4574,7 @@ export class BaileysStartupService extends ChannelStartupService {
   }
 
   public async baileysAssertSessions(jids: string[], force: boolean) {
-    const response = await this.client.assertSessions(jids);
+    const response = await this.client.assertSessions(jids, force);
 
     return response;
   }
