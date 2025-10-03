@@ -1,5 +1,6 @@
 import { InstanceDto } from '@api/dto/instance.dto';
 import { WAMonitoringService } from '@api/services/monitor.service';
+import { createJid } from '@utils/createJid';
 import {
   CreateCommunityDto,
   CreateCommunityGroupDto,
@@ -34,7 +35,8 @@ export class CommunityController {
   }
 
   public async communityCreateGroup(instance: InstanceDto, data: CreateCommunityGroupDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityCreateGroup(data.subject, data.participants, data.parentCommunityJid);
+    const participants = data.participants.map(p => createJid(p));
+    return await this.waMonitor.waInstances[instance.instanceName].communityCreateGroup(data.subject, participants, data.parentCommunityJid);
   }
 
   public async communityLeave(instance: InstanceDto, jid: string) {
@@ -62,11 +64,13 @@ export class CommunityController {
   }
 
   public async communityRequestParticipantsUpdate(instance: InstanceDto, jid: string, data: CommunityRequestParticipantsUpdateDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityRequestParticipantsUpdate(jid, data.participants, data.action);
+    const participants = data.participants.map(p => createJid(p));
+    return await this.waMonitor.waInstances[instance.instanceName].communityRequestParticipantsUpdate(jid, participants, data.action);
   }
 
   public async communityParticipantsUpdate(instance: InstanceDto, jid: string, data: CommunityParticipantsUpdateDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityParticipantsUpdate(jid, data.participants, data.action);
+    const participants = data.participants.map(p => createJid(p));
+    return await this.waMonitor.waInstances[instance.instanceName].communityParticipantsUpdate(jid, participants, data.action);
   }
 
   public async communityUpdateDescription(instance: InstanceDto, jid: string, data: CommunityUpdateDescriptionDto) {
