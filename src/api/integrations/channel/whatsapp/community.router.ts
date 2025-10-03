@@ -1,6 +1,7 @@
 import { RouterBroker } from '@api/abstract/abstract.router';
 import { InstanceDto } from '@api/dto/instance.dto';
-import { communityController } from '@api/server.module';
+import { CommunityController } from './community.controller';
+import { WAMonitoringService } from '@api/services/monitor.service';
 import {
   CreateCommunityDto,
   CreateCommunityGroupDto,
@@ -50,18 +51,22 @@ import { HttpStatus } from '@api/routes/index.router';
 export class CommunityRouter extends RouterBroker {
   public router: Router;
 
-  constructor(...guards: RequestHandler[]) {
+  constructor(
+    private readonly waMonitor: WAMonitoringService,
+    ...guards: RequestHandler[]
+  ) {
     super();
     this.router = Router();
+    const communityController = new CommunityController(waMonitor);
 
     this.router
       // ==================== COMMUNITY METADATA ====================
-      .get(this.routerPath('metadata'), ...guards, async (req, res) => {
+      .get(this.routerPath('metadata/:jid'), ...guards, async (req, res) => {
         const response = await this.dataValidate<InstanceDto>({
           request: req,
           schema: {},
           ClassRef: InstanceDto,
-          execute: (instance) => communityController.communityMetadata(instance, req.query.jid as string),
+          execute: (instance) => communityController.communityMetadata(instance, req.params.jid),
         });
         res.status(HttpStatus.OK).json(response);
       })
@@ -89,23 +94,23 @@ export class CommunityRouter extends RouterBroker {
       })
 
       // ==================== COMMUNITY LEAVE ====================
-      .delete(this.routerPath('leave'), ...guards, async (req, res) => {
+      .delete(this.routerPath('leave/:jid'), ...guards, async (req, res) => {
         const response = await this.dataValidate<InstanceDto>({
           request: req,
           schema: {},
           ClassRef: InstanceDto,
-          execute: (instance) => communityController.communityLeave(instance, req.query.jid as string),
+          execute: (instance) => communityController.communityLeave(instance, req.params.jid),
         });
         res.status(HttpStatus.OK).json(response);
       })
 
       // ==================== COMMUNITY UPDATE SUBJECT ====================
-      .put(this.routerPath('updateSubject'), ...guards, async (req, res) => {
+      .put(this.routerPath('updateSubject/:jid'), ...guards, async (req, res) => {
         const response = await this.dataValidate<CommunityUpdateSubjectDto>({
           request: req,
           schema: communityUpdateSubjectSchema,
           ClassRef: CommunityUpdateSubjectDto,
-          execute: (instance, data) => communityController.communityUpdateSubject(instance, req.query.jid as string, data),
+          execute: (instance, data) => communityController.communityUpdateSubject(instance, req.params.jid, data),
         });
         res.status(HttpStatus.OK).json(response);
       })
@@ -133,56 +138,56 @@ export class CommunityRouter extends RouterBroker {
       })
 
       // ==================== COMMUNITY FETCH LINKED GROUPS ====================
-      .get(this.routerPath('fetchLinkedGroups'), ...guards, async (req, res) => {
+      .get(this.routerPath('fetchLinkedGroups/:jid'), ...guards, async (req, res) => {
         const response = await this.dataValidate<InstanceDto>({
           request: req,
           schema: {},
           ClassRef: InstanceDto,
-          execute: (instance) => communityController.communityFetchLinkedGroups(instance, req.query.jid as string),
+          execute: (instance) => communityController.communityFetchLinkedGroups(instance, req.params.jid),
         });
         res.status(HttpStatus.OK).json(response);
       })
 
       // ==================== COMMUNITY REQUEST PARTICIPANTS LIST ====================
-      .get(this.routerPath('requestParticipantsList'), ...guards, async (req, res) => {
+      .get(this.routerPath('requestParticipantsList/:jid'), ...guards, async (req, res) => {
         const response = await this.dataValidate<InstanceDto>({
           request: req,
           schema: {},
           ClassRef: InstanceDto,
-          execute: (instance) => communityController.communityRequestParticipantsList(instance, req.query.jid as string),
+          execute: (instance) => communityController.communityRequestParticipantsList(instance, req.params.jid),
         });
         res.status(HttpStatus.OK).json(response);
       })
 
       // ==================== COMMUNITY REQUEST PARTICIPANTS UPDATE ====================
-      .post(this.routerPath('requestParticipantsUpdate'), ...guards, async (req, res) => {
+      .post(this.routerPath('requestParticipantsUpdate/:jid'), ...guards, async (req, res) => {
         const response = await this.dataValidate<CommunityRequestParticipantsUpdateDto>({
           request: req,
           schema: communityRequestParticipantsUpdateSchema,
           ClassRef: CommunityRequestParticipantsUpdateDto,
-          execute: (instance, data) => communityController.communityRequestParticipantsUpdate(instance, req.query.jid as string, data),
+          execute: (instance, data) => communityController.communityRequestParticipantsUpdate(instance, req.params.jid, data),
         });
         res.status(HttpStatus.OK).json(response);
       })
 
       // ==================== COMMUNITY PARTICIPANTS UPDATE ====================
-      .post(this.routerPath('participantsUpdate'), ...guards, async (req, res) => {
+      .post(this.routerPath('participantsUpdate/:jid'), ...guards, async (req, res) => {
         const response = await this.dataValidate<CommunityParticipantsUpdateDto>({
           request: req,
           schema: communityParticipantsUpdateSchema,
           ClassRef: CommunityParticipantsUpdateDto,
-          execute: (instance, data) => communityController.communityParticipantsUpdate(instance, req.query.jid as string, data),
+          execute: (instance, data) => communityController.communityParticipantsUpdate(instance, req.params.jid, data),
         });
         res.status(HttpStatus.OK).json(response);
       })
 
       // ==================== COMMUNITY UPDATE DESCRIPTION ====================
-      .put(this.routerPath('updateDescription'), ...guards, async (req, res) => {
+      .put(this.routerPath('updateDescription/:jid'), ...guards, async (req, res) => {
         const response = await this.dataValidate<CommunityUpdateDescriptionDto>({
           request: req,
           schema: communityUpdateDescriptionSchema,
           ClassRef: CommunityUpdateDescriptionDto,
-          execute: (instance, data) => communityController.communityUpdateDescription(instance, req.query.jid as string, data),
+          execute: (instance, data) => communityController.communityUpdateDescription(instance, req.params.jid, data),
         });
         res.status(HttpStatus.OK).json(response);
       })
@@ -254,45 +259,45 @@ export class CommunityRouter extends RouterBroker {
       })
 
       // ==================== COMMUNITY TOGGLE EPHEMERAL ====================
-      .post(this.routerPath('toggleEphemeral'), ...guards, async (req, res) => {
+      .post(this.routerPath('toggleEphemeral/:jid'), ...guards, async (req, res) => {
         const response = await this.dataValidate<CommunityToggleEphemeralDto>({
           request: req,
           schema: communityToggleEphemeralSchema,
           ClassRef: CommunityToggleEphemeralDto,
-          execute: (instance, data) => communityController.communityToggleEphemeral(instance, req.query.jid as string, data),
+          execute: (instance, data) => communityController.communityToggleEphemeral(instance, req.params.jid, data),
         });
         res.status(HttpStatus.OK).json(response);
       })
 
       // ==================== COMMUNITY SETTING UPDATE ====================
-      .put(this.routerPath('settingUpdate'), ...guards, async (req, res) => {
+      .put(this.routerPath('settingUpdate/:jid'), ...guards, async (req, res) => {
         const response = await this.dataValidate<CommunitySettingsDto>({
           request: req,
           schema: communitySettingsSchema,
           ClassRef: CommunitySettingsDto,
-          execute: (instance, data) => communityController.communitySettingUpdate(instance, req.query.jid as string, data),
+          execute: (instance, data) => communityController.communitySettingUpdate(instance, req.params.jid, data),
         });
         res.status(HttpStatus.OK).json(response);
       })
 
       // ==================== COMMUNITY MEMBER ADD MODE ====================
-      .put(this.routerPath('memberAddMode'), ...guards, async (req, res) => {
+      .put(this.routerPath('memberAddMode/:jid'), ...guards, async (req, res) => {
         const response = await this.dataValidate<CommunityMemberAddModeDto>({
           request: req,
           schema: communityMemberAddModeSchema,
           ClassRef: CommunityMemberAddModeDto,
-          execute: (instance, data) => communityController.communityMemberAddMode(instance, req.query.jid as string, data),
+          execute: (instance, data) => communityController.communityMemberAddMode(instance, req.params.jid, data),
         });
         res.status(HttpStatus.OK).json(response);
       })
 
       // ==================== COMMUNITY JOIN APPROVAL MODE ====================
-      .put(this.routerPath('joinApprovalMode'), ...guards, async (req, res) => {
+      .put(this.routerPath('joinApprovalMode/:jid'), ...guards, async (req, res) => {
         const response = await this.dataValidate<CommunityJoinApprovalModeDto>({
           request: req,
           schema: communityJoinApprovalModeSchema,
           ClassRef: CommunityJoinApprovalModeDto,
-          execute: (instance, data) => communityController.communityJoinApprovalMode(instance, req.query.jid as string, data),
+          execute: (instance, data) => communityController.communityJoinApprovalMode(instance, req.params.jid, data),
         });
         res.status(HttpStatus.OK).json(response);
       })

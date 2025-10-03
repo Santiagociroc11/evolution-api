@@ -216,7 +216,7 @@ router
   .use('/chat', new ChatRouter(...guards).router)
   .use('/business', new BusinessRouter(...guards).router)
   .use('/group', new GroupRouter(...guards).router)
-  .use('/community', new CommunityRouter(...guards).router)
+  .use('/community', new CommunityRouter(waMonitor, ...guards).router)
   .use('/template', new TemplateRouter(configService, ...guards).router)
   .use('/settings', new SettingsRouter(...guards).router)
   .use('/proxy', new ProxyRouter(...guards).router)

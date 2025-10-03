@@ -7,7 +7,6 @@ import { BusinessController } from './controllers/business.controller';
 import { CallController } from './controllers/call.controller';
 import { ChatController } from './controllers/chat.controller';
 import { GroupController } from './controllers/group.controller';
-import { CommunityController } from './integrations/channel/whatsapp/community.controller';
 import { InstanceController } from './controllers/instance.controller';
 import { LabelController } from './controllers/label.controller';
 import { ProxyController } from './controllers/proxy.controller';
@@ -106,7 +105,6 @@ export const callController = new CallController(waMonitor);
 export const chatController = new ChatController(waMonitor);
 export const businessController = new BusinessController(waMonitor);
 export const groupController = new GroupController(waMonitor);
-export const communityController = new CommunityController(waMonitor);
 export const labelController = new LabelController(waMonitor);
 
 export const eventManager = new EventManager(prismaRepository, waMonitor);
