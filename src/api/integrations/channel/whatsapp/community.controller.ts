@@ -1,5 +1,5 @@
-import { InstanceDto } from '@api/dto/instance.dto';
-import { WAMonitoringService } from '@api/services/monitor.service';
+import { InstanceDto } from '../../dto/instance.dto';
+import { WAMonitoringService } from '../../services/monitoring.service';
 import {
   CreateCommunityDto,
   CreateCommunityGroupDto,
@@ -20,100 +20,123 @@ import {
   CommunityToggleEphemeralDto,
   CommunityFetchLinkedGroupsDto,
   CommunityRequestParticipantsUpdateDto,
-} from '@api/dto/community.dto';
+} from '../../dto/community.dto';
 
 export class CommunityController {
   constructor(private readonly waMonitor: WAMonitoringService) {}
 
-  public async communityMetadata(instance: InstanceDto, jid: string) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityMetadata(jid);
+  public async communityMetadata({ instanceName }: InstanceDto, jid: string) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityMetadata(jid);
   }
 
-  public async communityCreate(instance: InstanceDto, data: CreateCommunityDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityCreate(data.subject, data.body);
+  public async communityCreate({ instanceName }: InstanceDto, data: CreateCommunityDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityCreate(data.subject, data.body);
   }
 
-  public async communityCreateGroup(instance: InstanceDto, data: CreateCommunityGroupDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityCreateGroup(data.subject, data.participants, data.parentCommunityJid);
+  public async communityCreateGroup({ instanceName }: InstanceDto, data: CreateCommunityGroupDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityCreateGroup(data.subject, data.participants, data.parentCommunityJid);
   }
 
-  public async communityLeave(instance: InstanceDto, jid: string) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityLeave(jid);
+  public async communityLeave({ instanceName }: InstanceDto, jid: string) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityLeave(jid);
   }
 
-  public async communityUpdateSubject(instance: InstanceDto, jid: string, data: CommunityUpdateSubjectDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityUpdateSubject(jid, data.subject);
+  public async communityUpdateSubject({ instanceName }: InstanceDto, jid: string, data: CommunityUpdateSubjectDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityUpdateSubject(jid, data.subject);
   }
 
-  public async communityLinkGroup(instance: InstanceDto, data: CommunityLinkGroupDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityLinkGroup(data.groupJid, data.parentCommunityJid);
+  public async communityLinkGroup({ instanceName }: InstanceDto, data: CommunityLinkGroupDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityLinkGroup(data.groupJid, data.parentCommunityJid);
   }
 
-  public async communityUnlinkGroup(instance: InstanceDto, data: CommunityUnlinkGroupDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityUnlinkGroup(data.groupJid, data.parentCommunityJid);
+  public async communityUnlinkGroup({ instanceName }: InstanceDto, data: CommunityUnlinkGroupDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityUnlinkGroup(data.groupJid, data.parentCommunityJid);
   }
 
-  public async communityFetchLinkedGroups(instance: InstanceDto, jid: string) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityFetchLinkedGroups(jid);
+  public async communityFetchLinkedGroups({ instanceName }: InstanceDto, jid: string) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityFetchLinkedGroups(jid);
   }
 
-  public async communityRequestParticipantsList(instance: InstanceDto, jid: string) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityRequestParticipantsList(jid);
+  public async communityRequestParticipantsList({ instanceName }: InstanceDto, jid: string) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityRequestParticipantsList(jid);
   }
 
-  public async communityRequestParticipantsUpdate(instance: InstanceDto, jid: string, data: CommunityRequestParticipantsUpdateDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityRequestParticipantsUpdate(jid, data.participants, data.action);
+  public async communityRequestParticipantsUpdate({ instanceName }: InstanceDto, jid: string, data: CommunityRequestParticipantsUpdateDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityRequestParticipantsUpdate(jid, data.participants, data.action);
   }
 
-  public async communityParticipantsUpdate(instance: InstanceDto, jid: string, data: CommunityParticipantsUpdateDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityParticipantsUpdate(jid, data.participants, data.action);
+  public async communityParticipantsUpdate({ instanceName }: InstanceDto, jid: string, data: CommunityParticipantsUpdateDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityParticipantsUpdate(jid, data.participants, data.action);
   }
 
-  public async communityUpdateDescription(instance: InstanceDto, jid: string, data: CommunityUpdateDescriptionDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityUpdateDescription(jid, data.description);
+  public async communityUpdateDescription({ instanceName }: InstanceDto, jid: string, data: CommunityUpdateDescriptionDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityUpdateDescription(jid, data.description);
   }
 
-  public async communityInviteCode(instance: InstanceDto, data: CommunityInviteCodeDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityInviteCode(data.jid);
+  public async communityInviteCode({ instanceName }: InstanceDto, data: CommunityInviteCodeDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityInviteCode(data.jid);
   }
 
-  public async communityRevokeInvite(instance: InstanceDto, data: CommunityRevokeInviteDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityRevokeInvite(data.jid);
+  public async communityRevokeInvite({ instanceName }: InstanceDto, data: CommunityRevokeInviteDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityRevokeInvite(data.jid);
   }
 
-  public async communityAcceptInvite(instance: InstanceDto, data: CommunityAcceptInviteDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityAcceptInvite(data.code);
+  public async communityAcceptInvite({ instanceName }: InstanceDto, data: CommunityAcceptInviteDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityAcceptInvite(data.code);
   }
 
-  public async communityRevokeInviteV4(instance: InstanceDto, data: CommunityRevokeInviteV4Dto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityRevokeInviteV4(data.communityJid, data.invitedJid);
+  public async communityRevokeInviteV4({ instanceName }: InstanceDto, data: CommunityRevokeInviteV4Dto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityRevokeInviteV4(data.communityJid, data.invitedJid);
   }
 
-  public async communityAcceptInviteV4(instance: InstanceDto, data: CommunityAcceptInviteV4Dto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityAcceptInviteV4(data.key, data.inviteMessage);
+  public async communityAcceptInviteV4({ instanceName }: InstanceDto, data: CommunityAcceptInviteV4Dto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityAcceptInviteV4(data.key, data.inviteMessage);
   }
 
-  public async communityGetInviteInfo(instance: InstanceDto, data: CommunityGetInviteInfoDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityGetInviteInfo(data.code);
+  public async communityGetInviteInfo({ instanceName }: InstanceDto, data: CommunityGetInviteInfoDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityGetInviteInfo(data.code);
   }
 
-  public async communityToggleEphemeral(instance: InstanceDto, jid: string, data: CommunityToggleEphemeralDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityToggleEphemeral(jid, data.ephemeralExpiration);
+  public async communityToggleEphemeral({ instanceName }: InstanceDto, jid: string, data: CommunityToggleEphemeralDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityToggleEphemeral(jid, data.ephemeralExpiration);
   }
 
-  public async communitySettingUpdate(instance: InstanceDto, jid: string, data: CommunitySettingsDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communitySettingUpdate(jid, data.setting);
+  public async communitySettingUpdate({ instanceName }: InstanceDto, jid: string, data: CommunitySettingsDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communitySettingUpdate(jid, data.setting);
   }
 
-  public async communityMemberAddMode(instance: InstanceDto, jid: string, data: CommunityMemberAddModeDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityMemberAddMode(jid, data.mode);
+  public async communityMemberAddMode({ instanceName }: InstanceDto, jid: string, data: CommunityMemberAddModeDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityMemberAddMode(jid, data.mode);
   }
 
-  public async communityJoinApprovalMode(instance: InstanceDto, jid: string, data: CommunityJoinApprovalModeDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityJoinApprovalMode(jid, data.mode);
+  public async communityJoinApprovalMode({ instanceName }: InstanceDto, jid: string, data: CommunityJoinApprovalModeDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityJoinApprovalMode(jid, data.mode);
   }
 
-  public async communityFetchAllParticipating(instance: InstanceDto) {
-    return await this.waMonitor.waInstances[instance.instanceName].communityFetchAllParticipating();
+  public async communityFetchAllParticipating({ instanceName }: InstanceDto) {
+    const instance = this.waMonitor.waInstances[instanceName];
+    return instance.communityFetchAllParticipating();
   }
 }
