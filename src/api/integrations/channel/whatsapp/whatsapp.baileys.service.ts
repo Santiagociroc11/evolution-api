@@ -18,6 +18,7 @@ import {
 import {
   AcceptGroupInvite,
   CreateGroupDto,
+  FetchNewslettersDto,
   GetParticipant,
   GroupDescriptionDto,
   GroupInvite,
@@ -4365,9 +4366,63 @@ export class BaileysStartupService extends ChannelStartupService {
         throw new NotFoundException('Newsletter not found');
       }
 
-      return metadata;
+      // La respuesta incluye viewer_metadata con el role del usuario actual
+      // Extraerlo si existe en la respuesta cruda
+      const response = metadata as any;
+      const viewerRole = response.viewer_metadata?.role || response.role || 'SUBSCRIBER';
+
+      return {
+        ...metadata,
+        viewerRole, // ROL del usuario que hace la petición
+      };
     } catch (error) {
       throw new NotFoundException('Error fetching newsletter metadata', error.toString());
+    }
+  }
+
+  public async fetchAllNewsletters(data: FetchNewslettersDto) {
+    try {
+      // Obtener todos los chats que son newsletters desde la DB
+      const newsletters = await this.prismaRepository.chat.findMany({
+        where: {
+          instanceId: this.instanceId,
+          remoteJid: { endsWith: '@newsletter' },
+        },
+      });
+
+      // Si no se solicita metadata, devolver solo la lista básica
+      if (data.withMetadata !== 'true') {
+        return newsletters;
+      }
+
+      // Si se solicita metadata, obtener info completa de cada newsletter
+      const newslettersWithMetadata = await Promise.all(
+        newsletters.map(async (newsletter) => {
+          try {
+            const metadata = await this.client.newsletterMetadata('jid', newsletter.remoteJid);
+            const response = metadata as any;
+            const viewerRole = response.viewer_metadata?.role || response.role || 'SUBSCRIBER';
+
+            return {
+              ...newsletter,
+              metadata: {
+                ...metadata,
+                viewerRole, // ROL del usuario que hace la petición
+              },
+            };
+          } catch (error) {
+            this.logger.warn(`Could not fetch metadata for newsletter ${newsletter.remoteJid}:`, error);
+            return {
+              ...newsletter,
+              metadata: null,
+            };
+          }
+        }),
+      );
+
+      return newslettersWithMetadata;
+    } catch (error) {
+      throw new NotFoundException('Error fetching newsletters', error.toString());
     }
   }
 

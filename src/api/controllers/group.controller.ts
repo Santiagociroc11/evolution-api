@@ -1,6 +1,7 @@
 import {
   AcceptGroupInvite,
   CreateGroupDto,
+  FetchNewslettersDto,
   GetParticipant,
   GroupDescriptionDto,
   GroupInvite,
@@ -85,5 +86,9 @@ export class GroupController {
 
   public async newsletterMetadata(instance: InstanceDto, data: NewsletterMetadataDto) {
     return await this.waMonitor.waInstances[instance.instanceName].newsletterMetadata(data);
+  }
+
+  public async fetchAllNewsletters(instance: InstanceDto, data: FetchNewslettersDto) {
+    return await this.waMonitor.waInstances[instance.instanceName].fetchAllNewsletters(data);
   }
 }

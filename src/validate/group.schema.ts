@@ -202,3 +202,11 @@ export const newsletterMetadataSchema: JSONSchema7 = {
   required: ['type', 'key'],
   ...isNotEmpty('type', 'key'),
 };
+
+export const fetchNewslettersSchema: JSONSchema7 = {
+  $id: v4(),
+  type: 'object',
+  properties: {
+    withMetadata: { type: 'string', enum: ['true', 'false'] },
+  },
+};

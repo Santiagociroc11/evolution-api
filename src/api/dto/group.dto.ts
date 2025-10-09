@@ -59,3 +59,7 @@ export class NewsletterMetadataDto {
   type: 'invite' | 'jid';
   key: string;
 }
+
+export class FetchNewslettersDto {
+  withMetadata?: string; // 'true' | 'false'
+}

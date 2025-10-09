@@ -2,6 +2,7 @@ import { RouterBroker } from '@api/abstract/abstract.router';
 import {
   AcceptGroupInvite,
   CreateGroupDto,
+  FetchNewslettersDto,
   GetParticipant,
   GroupDescriptionDto,
   GroupInvite,
@@ -18,6 +19,7 @@ import { groupController } from '@api/server.module';
 import {
   AcceptGroupInviteSchema,
   createGroupSchema,
+  fetchNewslettersSchema,
   getParticipantsSchema,
   groupInviteSchema,
   groupJidSchema,
@@ -204,6 +206,16 @@ export class GroupRouter extends RouterBroker {
           schema: newsletterMetadataSchema,
           ClassRef: NewsletterMetadataDto,
           execute: (instance, data) => groupController.newsletterMetadata(instance, data),
+        });
+
+        res.status(HttpStatus.OK).json(response);
+      })
+      .get(this.routerPath('fetchAllNewsletters'), ...guards, async (req, res) => {
+        const response = await this.dataValidate<FetchNewslettersDto>({
+          request: req,
+          schema: fetchNewslettersSchema,
+          ClassRef: FetchNewslettersDto,
+          execute: (instance, data) => groupController.fetchAllNewsletters(instance, data),
         });
 
         res.status(HttpStatus.OK).json(response);
