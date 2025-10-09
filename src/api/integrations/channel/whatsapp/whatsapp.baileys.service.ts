@@ -4411,7 +4411,7 @@ export class BaileysStartupService extends ChannelStartupService {
               },
             };
           } catch (error) {
-            this.logger.warn(`Could not fetch metadata for newsletter ${newsletter.remoteJid}:`, error);
+            this.logger.warn(`Could not fetch metadata for newsletter ${newsletter.remoteJid}: ${error.toString()}`);
             return {
               ...newsletter,
               metadata: null,
