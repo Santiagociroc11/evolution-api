@@ -199,7 +199,7 @@ export class GroupRouter extends RouterBroker {
         res.status(HttpStatus.OK).json(response);
       })
       .get(this.routerPath('newsletterMetadata'), ...guards, async (req, res) => {
-        const response = await this.dataValidate<NewsletterMetadataDto>({
+        const response = await this.newsletterMetadataValidate<NewsletterMetadataDto>({
           request: req,
           schema: newsletterMetadataSchema,
           ClassRef: NewsletterMetadataDto,

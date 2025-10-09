@@ -223,4 +223,47 @@ export abstract class RouterBroker {
 
     return await execute(instance, ref);
   }
+
+  public async newsletterMetadataValidate<T>(args: DataValidate<T>) {
+    const { request, ClassRef, schema, execute } = args;
+
+    const newsletterData = request.query as any;
+
+    if (!newsletterData?.type) {
+      throw new BadRequestException('The "type" parameter needs to be informed in the query', 'ex: "type=jid" or "type=invite"');
+    }
+
+    if (!newsletterData?.key) {
+      throw new BadRequestException('The "key" parameter needs to be informed in the query', 'ex: "key=120363xxx@newsletter"');
+    }
+
+    const instance = request.params as unknown as InstanceDto;
+    const body = request.body;
+
+    const ref = new ClassRef();
+
+    Object.assign(body, newsletterData);
+    Object.assign(ref, body);
+
+    const v = validate(ref, schema);
+
+    if (!v.valid) {
+      const message: any[] = v.errors.map(({ property, stack, schema }) => {
+        let message: string;
+        if (schema['description']) {
+          message = schema['description'];
+        } else {
+          message = stack.replace('instance.', '');
+        }
+        return {
+          property: property.replace('instance.', ''),
+          message,
+        };
+      });
+      logger.error([...message]);
+      throw new BadRequestException(...message);
+    }
+
+    return await execute(instance, ref);
+  }
 }
