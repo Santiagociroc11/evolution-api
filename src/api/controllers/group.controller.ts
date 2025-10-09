@@ -11,6 +11,7 @@ import {
   GroupToggleEphemeralDto,
   GroupUpdateParticipantDto,
   GroupUpdateSettingDto,
+  NewsletterMetadataDto,
 } from '@api/dto/group.dto';
 import { InstanceDto } from '@api/dto/instance.dto';
 import { WAMonitoringService } from '@api/services/monitor.service';
@@ -80,5 +81,9 @@ export class GroupController {
 
   public async leaveGroup(instance: InstanceDto, groupJid: GroupJid) {
     return await this.waMonitor.waInstances[instance.instanceName].leaveGroup(groupJid);
+  }
+
+  public async newsletterMetadata(instance: InstanceDto, data: NewsletterMetadataDto) {
+    return await this.waMonitor.waInstances[instance.instanceName].newsletterMetadata(data);
   }
 }

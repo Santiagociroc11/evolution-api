@@ -28,6 +28,7 @@ import {
   GroupToggleEphemeralDto,
   GroupUpdateParticipantDto,
   GroupUpdateSettingDto,
+  NewsletterMetadataDto,
 } from '@api/dto/group.dto';
 import { InstanceDto, SetPresenceDto } from '@api/dto/instance.dto';
 import { HandleLabelDto, LabelDto } from '@api/dto/label.dto';
@@ -4353,6 +4354,20 @@ export class BaileysStartupService extends ChannelStartupService {
       return { groupJid: id.groupJid, leave: true };
     } catch (error) {
       throw new BadRequestException('Unable to leave the group', error.toString());
+    }
+  }
+
+  public async newsletterMetadata(data: NewsletterMetadataDto) {
+    try {
+      const metadata = await this.client.newsletterMetadata(data.type, data.key);
+
+      if (!metadata) {
+        throw new NotFoundException('Newsletter not found');
+      }
+
+      return metadata;
+    } catch (error) {
+      throw new NotFoundException('Error fetching newsletter metadata', error.toString());
     }
   }
 

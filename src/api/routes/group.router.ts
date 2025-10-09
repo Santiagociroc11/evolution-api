@@ -12,6 +12,7 @@ import {
   GroupToggleEphemeralDto,
   GroupUpdateParticipantDto,
   GroupUpdateSettingDto,
+  NewsletterMetadataDto,
 } from '@api/dto/group.dto';
 import { groupController } from '@api/server.module';
 import {
@@ -21,6 +22,7 @@ import {
   groupInviteSchema,
   groupJidSchema,
   groupSendInviteSchema,
+  newsletterMetadataSchema,
   toggleEphemeralSchema,
   updateGroupDescriptionSchema,
   updateGroupPictureSchema,
@@ -192,6 +194,16 @@ export class GroupRouter extends RouterBroker {
           schema: {},
           ClassRef: GroupJid,
           execute: (instance, data) => groupController.leaveGroup(instance, data),
+        });
+
+        res.status(HttpStatus.OK).json(response);
+      })
+      .get(this.routerPath('newsletterMetadata'), ...guards, async (req, res) => {
+        const response = await this.dataValidate<NewsletterMetadataDto>({
+          request: req,
+          schema: newsletterMetadataSchema,
+          ClassRef: NewsletterMetadataDto,
+          execute: (instance, data) => groupController.newsletterMetadata(instance, data),
         });
 
         res.status(HttpStatus.OK).json(response);

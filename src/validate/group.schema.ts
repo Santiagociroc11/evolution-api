@@ -191,3 +191,14 @@ export const updateGroupDescriptionSchema: JSONSchema7 = {
   required: ['groupJid', 'description'],
   ...isNotEmpty('groupJid', 'description'),
 };
+
+export const newsletterMetadataSchema: JSONSchema7 = {
+  $id: v4(),
+  type: 'object',
+  properties: {
+    type: { type: 'string', enum: ['invite', 'jid'] },
+    key: { type: 'string', minLength: 1 },
+  },
+  required: ['type', 'key'],
+  ...isNotEmpty('type', 'key'),
+};
