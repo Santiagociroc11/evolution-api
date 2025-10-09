@@ -4382,17 +4382,41 @@ export class BaileysStartupService extends ChannelStartupService {
 
   public async fetchAllNewsletters(data: FetchNewslettersDto) {
     try {
-      // Obtener todos los chats que son newsletters desde la DB
-      const newsletters = await this.prismaRepository.chat.findMany({
+      // Primero obtener TODOS los chats para debug
+      const allChats = await this.prismaRepository.chat.findMany({
         where: {
           instanceId: this.instanceId,
-          remoteJid: { endsWith: '@newsletter' },
+        },
+        select: {
+          remoteJid: true,
+          name: true,
         },
       });
 
+      // Filtrar newsletters (pueden tener formato @newsletter o newsletter en el JID)
+      const newsletters = allChats.filter(
+        (chat) => chat.remoteJid.includes('newsletter') || chat.remoteJid.includes('@newsletter'),
+      );
+
+      // Si no hay newsletters, devolver información útil
+      if (newsletters.length === 0) {
+        return {
+          newsletters: [],
+          totalChats: allChats.length,
+          message: 'No newsletters found. Make sure you are subscribed to newsletters and they are synced.',
+          debug: {
+            sampleChats: allChats.slice(0, 5).map((c) => c.remoteJid), // Primeros 5 chats para debug
+          },
+        };
+      }
+
       // Si no se solicita metadata, devolver solo la lista básica
       if (data.withMetadata !== 'true') {
-        return newsletters;
+        return {
+          newsletters: newsletters,
+          totalNewsletters: newsletters.length,
+          totalChats: allChats.length,
+        };
       }
 
       // Si se solicita metadata, obtener info completa de cada newsletter
@@ -4415,12 +4439,17 @@ export class BaileysStartupService extends ChannelStartupService {
             return {
               ...newsletter,
               metadata: null,
+              error: 'Could not fetch metadata',
             };
           }
         }),
       );
 
-      return newslettersWithMetadata;
+      return {
+        newsletters: newslettersWithMetadata,
+        totalNewsletters: newsletters.length,
+        totalChats: allChats.length,
+      };
     } catch (error) {
       throw new NotFoundException('Error fetching newsletters', error.toString());
     }
