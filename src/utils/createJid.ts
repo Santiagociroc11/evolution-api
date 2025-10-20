@@ -43,6 +43,10 @@ export function createJid(number: string): string {
     return number;
   }
 
+  if (number.includes('@newsletter')) {
+    return number;
+  }
+
   number = number
     ?.replace(/\s/g, '')
     .replace(/\+/g, '')

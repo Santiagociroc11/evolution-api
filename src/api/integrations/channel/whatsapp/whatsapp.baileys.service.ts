@@ -2077,7 +2077,7 @@ export class BaileysStartupService extends ChannelStartupService {
   ) {
     const isWA = (await this.whatsappNumber({ numbers: [number] }))?.shift();
 
-    if (!isWA.exists && !isJidGroup(isWA.jid) && !isWA.jid.includes('@broadcast')) {
+    if (!isWA.exists && !isJidGroup(isWA.jid) && !isWA.jid.includes('@broadcast') && !isWA.jid.includes('@newsletter') && !isWA.jid.includes('@newsletter')) {
       throw new BadRequestException(isWA);
     }
 
@@ -2324,7 +2324,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
       const isWA = (await this.whatsappNumber({ numbers: [number] }))?.shift();
 
-      if (!isWA.exists && !isJidGroup(isWA.jid) && !isWA.jid.includes('@broadcast')) {
+      if (!isWA.exists && !isJidGroup(isWA.jid) && !isWA.jid.includes('@broadcast') && !isWA.jid.includes('@newsletter')) {
         throw new BadRequestException(isWA);
       }
 
@@ -3264,8 +3264,9 @@ export class BaileysStartupService extends ChannelStartupService {
     const jids: {
       groups: { number: string; jid: string }[];
       broadcast: { number: string; jid: string }[];
+      newsletters: { number: string; jid: string }[];
       users: { number: string; jid: string; name?: string }[];
-    } = { groups: [], broadcast: [], users: [] };
+    } = { groups: [], broadcast: [], newsletters: [], users: [] };
 
     data.numbers.forEach((number) => {
       const jid = createJid(number);
@@ -3274,6 +3275,8 @@ export class BaileysStartupService extends ChannelStartupService {
         jids.groups.push({ number, jid });
       } else if (jid === 'status@broadcast') {
         jids.broadcast.push({ number, jid });
+      } else if (jid.includes('@newsletter')) {
+        jids.newsletters.push({ number, jid });
       } else {
         jids.users.push({ number, jid });
       }
@@ -3283,6 +3286,9 @@ export class BaileysStartupService extends ChannelStartupService {
 
     // BROADCAST
     onWhatsapp.push(...jids.broadcast.map(({ jid, number }) => new OnWhatsAppDto(jid, false, number)));
+
+    // NEWSLETTERS
+    onWhatsapp.push(...jids.newsletters.map(({ jid, number }) => new OnWhatsAppDto(jid, true, number)));
 
     // GROUPS
     const groups = await Promise.all(
@@ -3867,7 +3873,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
       const isWA = (await this.whatsappNumber({ numbers: [number] }))?.shift();
 
-      if (!isWA.exists && !isJidGroup(isWA.jid) && !isWA.jid.includes('@broadcast')) {
+      if (!isWA.exists && !isJidGroup(isWA.jid) && !isWA.jid.includes('@broadcast') && !isWA.jid.includes('@newsletter')) {
         throw new BadRequestException(isWA);
       }
 
