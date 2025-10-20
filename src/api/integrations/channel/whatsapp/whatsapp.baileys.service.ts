@@ -2528,9 +2528,25 @@ export class BaileysStartupService extends ChannelStartupService {
           imageBuffer = Buffer.from(mediaMessage.media, 'base64');
         }
 
-        mediaInput = await sharp(imageBuffer).jpeg().toBuffer();
-        mediaMessage.fileName ??= 'image.jpg';
-        mediaMessage.mimetype = 'image/jpeg';
+        // Detectar el tipo de imagen original y mantener la calidad
+        const imageInfo = await sharp(imageBuffer).metadata();
+        
+        if (imageInfo.format === 'png' && imageInfo.hasAlpha) {
+          // Para PNG con transparencia, mantener como PNG
+          mediaInput = await sharp(imageBuffer).png({ quality: 95 }).toBuffer();
+          mediaMessage.fileName ??= 'image.png';
+          mediaMessage.mimetype = 'image/png';
+        } else if (imageInfo.format === 'webp') {
+          // Para WebP, mantener como WebP
+          mediaInput = await sharp(imageBuffer).webp({ quality: 95 }).toBuffer();
+          mediaMessage.fileName ??= 'image.webp';
+          mediaMessage.mimetype = 'image/webp';
+        } else {
+          // Para otros formatos, convertir a JPEG con alta calidad
+          mediaInput = await sharp(imageBuffer).jpeg({ quality: 95 }).toBuffer();
+          mediaMessage.fileName ??= 'image.jpg';
+          mediaMessage.mimetype = 'image/jpeg';
+        }
       } else {
         mediaInput = isURL(mediaMessage.media)
           ? { url: mediaMessage.media }
@@ -2686,7 +2702,7 @@ export class BaileysStartupService extends ChannelStartupService {
       if (isAnimated) {
         return await sharp(imageBuffer, { animated: true }).webp({ quality: 80 }).toBuffer();
       } else {
-        return await sharp(imageBuffer).webp().toBuffer();
+        return await sharp(imageBuffer).webp({ quality: 95 }).toBuffer();
       }
     } catch (error) {
       console.error('Erro ao converter a imagem para WebP:', error);
