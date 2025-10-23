@@ -81,7 +81,7 @@ import { BadRequestException, InternalServerErrorException, NotFoundException } 
 import ffmpegPath from '@ffmpeg-installer/ffmpeg';
 import { Boom } from '@hapi/boom';
 import { createId as cuid } from '@paralleldrive/cuid2';
-import { Prisma } from '@prisma/client';
+import { Instance, Message } from '@prisma/client';
 import { createJid } from '@utils/createJid';
 import { fetchLatestWaWebVersion } from '@utils/fetchLatestWaWebVersion';
 import { makeProxyAgent } from '@utils/makeProxyAgent';
@@ -1765,12 +1765,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
           if (events['group-participants.update']) {
             const payload = events['group-participants.update'];
-            // Transform GroupParticipant[] to string[] for compatibility
-            const transformedPayload = {
-              ...payload,
-              participants: payload.participants.map(p => typeof p === 'string' ? p : p.id)
-            };
-            this.groupHandler['group-participants.update'](transformedPayload);
+            this.groupHandler['group-participants.update'](payload);
           }
         }
 
@@ -1895,7 +1890,7 @@ export class BaileysStartupService extends ChannelStartupService {
         };
       } else {
         const instanceNames = instanceName ? [instanceName] : null;
-        const info: any = await waMonitor.instanceInfo(instanceNames);
+        const info: Instance = await waMonitor.instanceInfo(instanceNames);
         const business = await this.fetchBusinessProfile(jid);
 
         return {
@@ -2133,7 +2128,7 @@ export class BaileysStartupService extends ChannelStartupService {
       if (options?.quoted) {
         const m = options?.quoted;
 
-        const msg = m?.message ? m : ((await this.getMessage(m.key, true)) as WAMessage);
+        const msg = m?.message ? m : ((await this.getMessage(m.key, true)) as proto.IWebMessageInfo);
 
         if (msg) {
           quoted = msg;
@@ -3408,9 +3403,12 @@ export class BaileysStartupService extends ChannelStartupService {
           }
 
           const numberJid = numberVerified?.jid || user.jid;
-          const lid = numberJid.includes('@lid')
-            ? numberJid.split('@')[1]
-            : undefined;
+          const lid =
+            typeof numberVerified?.lid === 'string'
+              ? numberVerified.lid
+              : numberJid.includes('@lid')
+                ? numberJid.split('@')[1]
+                : undefined;
           return new OnWhatsAppDto(
             numberJid,
             !!numberVerified?.exists,
@@ -4697,7 +4695,7 @@ export class BaileysStartupService extends ChannelStartupService {
   }
 
   public async baileysAssertSessions(jids: string[], force: boolean) {
-    const response = await this.client.assertSessions(jids);
+    const response = await this.client.assertSessions(jids, force);
 
     return response;
   }
@@ -4873,7 +4871,7 @@ export class BaileysStartupService extends ChannelStartupService {
     }
   }
 
-  public async fetchMessages(query: Query<any>) {
+  public async fetchMessages(query: Query<Message>) {
     const keyFilters = query?.where?.key as ExtendedIMessageKey;
 
     const timestampFilter = {};
