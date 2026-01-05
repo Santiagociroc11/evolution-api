@@ -75,6 +75,27 @@ export class BusinessStartupService extends ChannelStartupService {
     return message.document || message.image || message.audio || message.video;
   }
 
+  private processReferral(message: any, content: any): any {
+    // Procesar referral si existe (Click to WhatsApp ads)
+    if (message.referral) {
+      const externalAdReply = {
+        title: message.referral.headline,
+        body: message.referral.body,
+        thumbnailUrl: message.referral.image_url,
+        sourceUrl: message.referral.source_url,
+        sourceId: message.referral.source_id,
+        ctwaClid: message.referral.ctwa_clid,
+      };
+
+      if (content.contextInfo) {
+        content.contextInfo.externalAdReply = externalAdReply;
+      } else {
+        content.contextInfo = { externalAdReply };
+      }
+    }
+    return content;
+  }
+
   private async post(message: any, params: string) {
     try {
       let urlServer = this.configService.get<WaBusiness>('WA_BUSINESS').URL;
@@ -171,6 +192,8 @@ export class BusinessStartupService extends ChannelStartupService {
     if (message.context) {
       content = { ...content, contextInfo: { stanzaId: message.context.id } };
     }
+    // Procesar referral si existe (Click to WhatsApp ads)
+    content = this.processReferral(message, content);
     return content;
   }
 
@@ -185,6 +208,8 @@ export class BusinessStartupService extends ChannelStartupService {
     if (message.context) {
       content = { ...content, contextInfo: { stanzaId: message.context.id } };
     }
+    // Procesar referral si existe (Click to WhatsApp ads)
+    content = this.processReferral(message, content);
     return content;
   }
 
@@ -192,6 +217,8 @@ export class BusinessStartupService extends ChannelStartupService {
     const message = received.messages[0];
     let content: any = { conversation: message.interactive[message.interactive.type].title };
     message.context ? (content = { ...content, contextInfo: { stanzaId: message.context.id } }) : content;
+    // Procesar referral si existe (Click to WhatsApp ads)
+    content = this.processReferral(message, content);
     return content;
   }
 
@@ -199,6 +226,8 @@ export class BusinessStartupService extends ChannelStartupService {
     const message = received.messages[0];
     let content: any = { conversation: received.messages[0].button?.text };
     message.context ? (content = { ...content, contextInfo: { stanzaId: message.context.id } }) : content;
+    // Procesar referral si existe (Click to WhatsApp ads)
+    content = this.processReferral(message, content);
     return content;
   }
 
@@ -213,6 +242,8 @@ export class BusinessStartupService extends ChannelStartupService {
       },
     };
     message.context ? (content = { ...content, contextInfo: { stanzaId: message.context.id } }) : content;
+    // Procesar referral si existe (Click to WhatsApp ads)
+    content = this.processReferral(message, content);
     return content;
   }
 
@@ -274,6 +305,9 @@ export class BusinessStartupService extends ChannelStartupService {
       }
     }
 
+    // Procesar referral si existe (Click to WhatsApp ads)
+    content = this.processReferral(message, content);
+
     return content;
   }
 
@@ -288,6 +322,8 @@ export class BusinessStartupService extends ChannelStartupService {
       },
     };
     message.context ? (content = { ...content, contextInfo: { stanzaId: message.context.id } }) : content;
+    // Procesar referral si existe (Click to WhatsApp ads)
+    content = this.processReferral(message, content);
     return content;
   }
 
@@ -343,6 +379,8 @@ export class BusinessStartupService extends ChannelStartupService {
       };
     }
     message.context ? (content = { ...content, contextInfo: { stanzaId: message.context.id } }) : content;
+    // Procesar referral si existe (Click to WhatsApp ads)
+    content = this.processReferral(message, content);
     return content;
   }
 
@@ -1016,8 +1054,6 @@ export class BusinessStartupService extends ChannelStartupService {
           return await this.post(content, 'messages');
         }
         if (message['media']) {
-          const isImage = message['mimetype']?.startsWith('image/');
-
           content = {
             messaging_product: 'whatsapp',
             recipient_type: 'individual',
@@ -1025,10 +1061,7 @@ export class BusinessStartupService extends ChannelStartupService {
             to: number.replace(/\D/g, ''),
             [message['mediaType']]: {
               [message['type']]: message['id'],
-              ...(message['mediaType'] !== 'audio' &&
-                message['mediaType'] !== 'video' &&
-                message['fileName'] &&
-                !isImage && { filename: message['fileName'] }),
+              ...(message['mediaType'] === 'document' && message['fileName'] && { filename: message['fileName'] }),
               ...(message['mediaType'] !== 'audio' && message['caption'] && { caption: message['caption'] }),
             },
           };
