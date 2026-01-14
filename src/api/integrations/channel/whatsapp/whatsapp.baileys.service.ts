@@ -4560,6 +4560,10 @@ export class BaileysStartupService extends ChannelStartupService {
 
       // Paso 2: Obtener JID de la instancia
       this.logger.verbose(`[fetchAdminGroups] Step 2: Getting instance JID...`);
+
+      // DEBUG: Log completo del objeto user para entender la estructura
+      this.logger.log(`[fetchAdminGroups] DEBUG - client.user: ${JSON.stringify(this.client?.user)}`);
+
       const instanceJidRaw = this.client?.user?.id;
 
       if (!instanceJidRaw) {
@@ -4575,7 +4579,16 @@ export class BaileysStartupService extends ChannelStartupService {
       // WhatsApp puede devolver: "5511999999999:1234567890@s.whatsapp.net"
       // Lo normalizamos a: "5511999999999@s.whatsapp.net"
       const instanceJid = instanceJidRaw.replace(/:\d+/, '');
+
+      // Extraer solo dígitos del JID para búsqueda permisiva
+      const instanceDigits = instanceJid.replace(/\D/g, '');
+      // Usar los últimos 10 dígitos (número local, más estable que código de país)
+      const instanceNumberSuffix = instanceDigits.length >= 10 ? instanceDigits.slice(-10) : instanceDigits;
+
       this.logger.log(`[fetchAdminGroups] Step 2: Normalized instance JID: ${instanceJid} (from ${instanceJidRaw})`);
+      this.logger.verbose(
+        `[fetchAdminGroups] Step 2: Using last 10 digits for flexible matching: ${instanceNumberSuffix} (from ${instanceDigits})`,
+      );
 
       // Paso 3: Filtrar grupos admin
       this.logger.verbose(
@@ -4594,39 +4607,92 @@ export class BaileysStartupService extends ChannelStartupService {
         // Normalizar owner JID para comparación
         const groupOwner = group.owner?.replace(/:\d+/, '') || group.owner;
 
-        // Es el owner del grupo
+        // Es el owner del grupo (comparación exacta primero)
         if (groupOwner === instanceJid) {
           ownerCount++;
           this.logger.verbose(
-            `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - OWNER match`,
+            `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - OWNER match (exact)`,
           );
           return true;
         }
 
+        // Búsqueda permisiva por últimos 10 dígitos en owner
+        if (instanceNumberSuffix && groupOwner) {
+          const ownerDigits = groupOwner.replace(/\D/g, '');
+          const ownerNumberSuffix = ownerDigits.length >= 10 ? ownerDigits.slice(-10) : ownerDigits;
+          if (ownerNumberSuffix === instanceNumberSuffix) {
+            ownerCount++;
+            this.logger.verbose(
+              `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - OWNER match (flexible: ...${ownerNumberSuffix})`,
+            );
+            return true;
+          }
+        }
+
         // Es admin en los participantes
         if (group.participants && Array.isArray(group.participants)) {
+          // DEBUG: Para los primeros 3 grupos, mostrar estructura completa de participantes
+          if (checkedGroups <= 3) {
+            // Buscar participantes que son admin en este grupo
+            const adminsInGroup = group.participants.filter((p) => p.admin === 'admin' || p.admin === 'superadmin');
+            this.logger.log(`[fetchAdminGroups] DEBUG - Group ${checkedGroups} raw data:`);
+            this.logger.log(`[fetchAdminGroups] DEBUG - Group owner: "${group.owner}"`);
+            this.logger.log(
+              `[fetchAdminGroups] DEBUG - Admins in group (${adminsInGroup.length}): ${JSON.stringify(adminsInGroup.slice(0, 5))}`,
+            );
+            this.logger.log(
+              `[fetchAdminGroups] DEBUG - First 3 participants: ${JSON.stringify(group.participants.slice(0, 3))}`,
+            );
+            this.logger.log(
+              `[fetchAdminGroups] DEBUG - Looking for instanceJid: "${instanceJid}" or suffix: "${instanceNumberSuffix}"`,
+            );
+          }
+
           const myParticipant = group.participants.find((p) => {
-            // Normalizar JID del participante para comparación
+            // Normalizar JID del participante
             const participantJid = p.id?.replace(/:\d+/, '') || p.id;
-            return participantJid === instanceJid;
+
+            // Comparación exacta primero
+            if (participantJid === instanceJid) {
+              return true;
+            }
+
+            // Búsqueda permisiva por últimos 10 dígitos
+            if (instanceNumberSuffix && participantJid) {
+              const participantDigits = participantJid.replace(/\D/g, '');
+              const participantNumberSuffix =
+                participantDigits.length >= 10 ? participantDigits.slice(-10) : participantDigits;
+              if (participantNumberSuffix === instanceNumberSuffix) {
+                return true;
+              }
+            }
+
+            return false;
           });
 
           if (myParticipant) {
             const role = myParticipant.admin || 'member';
+            const participantJid = myParticipant.id?.replace(/:\d+/, '') || myParticipant.id;
+            const matchType = participantJid === instanceJid ? 'exact' : 'flexible (last 10 digits)';
+
             this.logger.verbose(
-              `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - Found participant with role: ${role}`,
+              `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - Found participant (${matchType}) with role: ${role}`,
             );
 
             if (myParticipant.admin === 'admin' || myParticipant.admin === 'superadmin') {
               adminCount++;
               this.logger.verbose(
-                `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - ADMIN match (${myParticipant.admin})`,
+                `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - ADMIN match (${myParticipant.admin}, ${matchType})`,
               );
               return true;
+            } else {
+              this.logger.verbose(
+                `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - Found but role is "${role}" (not admin)`,
+              );
             }
           } else {
             this.logger.verbose(
-              `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - Not found in participants (${group.participants.length} participants)`,
+              `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - Not found in participants (${group.participants.length} participants). Looking for: ${instanceJid} or suffix: ...${instanceNumberSuffix}`,
             );
           }
         } else {
