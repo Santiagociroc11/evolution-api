@@ -4445,12 +4445,78 @@ export class BaileysStartupService extends ChannelStartupService {
     }
   }
 
+  /**
+   * Helper para procesar peticiones en lotes con delay para evitar bloqueos
+   * Simula el comportamiento humano/WhatsApp Web
+   */
+  private async processBatchWithDelay<T, R>(
+    items: T[],
+    processFn: (item: T) => Promise<R>,
+    options: {
+      batchSize?: number;
+      delayBetweenBatches?: number;
+      addJitter?: boolean;
+    } = {},
+  ): Promise<R[]> {
+    const { batchSize = 10, delayBetweenBatches = 300, addJitter = true } = options;
+
+    const results: R[] = [];
+    const totalBatches = Math.ceil(items.length / batchSize);
+
+    for (let i = 0; i < items.length; i += batchSize) {
+      const batch = items.slice(i, i + batchSize);
+      const batchNumber = Math.floor(i / batchSize) + 1;
+
+      this.logger.verbose(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} items) - fetchAllGroups`);
+
+      // Procesar el lote en paralelo
+      const batchResults = await Promise.allSettled(batch.map((item) => processFn(item)));
+
+      // Extraer resultados
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled') {
+          results.push(result.value);
+        } else {
+          // En caso de error, agregar valor por defecto
+          results.push(null as R);
+        }
+      }
+
+      // Delay entre lotes (excepto en el último)
+      if (i + batchSize < items.length) {
+        const jitter = addJitter ? Math.random() * 100 - 50 : 0; // ±50ms aleatorio
+        const finalDelay = Math.max(50, delayBetweenBatches + jitter);
+        await new Promise((resolve) => setTimeout(resolve, finalDelay));
+      }
+    }
+
+    return results;
+  }
+
   public async fetchAllGroups(getParticipants: GetParticipant) {
     const fetch = Object.values(await this?.client?.groupFetchAllParticipating());
 
-    let groups = [];
-    for (const group of fetch) {
-      const picture = await this.profilePicture(group.id);
+    this.logger.verbose(`Fetching profile pictures for ${fetch.length} groups in batches`);
+
+    // Obtener fotos en lotes para evitar rate limiting y bloqueos
+    const pictures = await this.processBatchWithDelay(
+      fetch,
+      async (group) => {
+        try {
+          return await this.profilePicture(group.id);
+        } catch {
+          return { profilePictureUrl: null };
+        }
+      },
+      {
+        batchSize: 10, // 10 fotos por lote (cauteloso para evitar bloqueos)
+        delayBetweenBatches: 300, // 300ms entre lotes (más seguro)
+        addJitter: true, // Agregar aleatoriedad para parecer más humano
+      },
+    );
+
+    const groups = fetch.map((group, index) => {
+      const picture = pictures[index] || { profilePictureUrl: null };
 
       const result = {
         id: group.id,
@@ -4474,9 +4540,90 @@ export class BaileysStartupService extends ChannelStartupService {
         result['participants'] = group.participants;
       }
 
-      groups = [...groups, result];
+      return result;
+    });
+
+    this.logger.verbose(`Successfully fetched ${groups.length} groups`);
+    return groups;
+  }
+
+  public async fetchAdminGroups(getParticipants: GetParticipant) {
+    const fetch = Object.values(await this?.client?.groupFetchAllParticipating());
+    const instanceJid = this.client?.user?.id; // JID de la instancia actual
+
+    if (!instanceJid) {
+      throw new NotFoundException('Instance JID not found');
     }
 
+    this.logger.verbose(`Filtering admin groups for ${instanceJid} from ${fetch.length} total groups`);
+
+    // Filtrar solo grupos donde es admin u owner
+    const adminOnlyGroups = fetch.filter((group) => {
+      // Es el owner del grupo
+      if (group.owner === instanceJid) {
+        return true;
+      }
+
+      // Es admin en los participantes
+      if (group.participants && Array.isArray(group.participants)) {
+        const myParticipant = group.participants.find((p) => p.id === instanceJid);
+        if (myParticipant && (myParticipant.admin === 'admin' || myParticipant.admin === 'superadmin')) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+
+    this.logger.verbose(`Found ${adminOnlyGroups.length} admin groups out of ${fetch.length} total`);
+
+    // Obtener fotos solo de grupos admin (optimizado con batch)
+    const pictures = await this.processBatchWithDelay(
+      adminOnlyGroups,
+      async (group) => {
+        try {
+          return await this.profilePicture(group.id);
+        } catch {
+          return { profilePictureUrl: null };
+        }
+      },
+      {
+        batchSize: 10,
+        delayBetweenBatches: 300,
+        addJitter: true,
+      },
+    );
+
+    const groups = adminOnlyGroups.map((group, index) => {
+      const picture = pictures[index] || { profilePictureUrl: null };
+
+      const result = {
+        id: group.id,
+        subject: group.subject,
+        subjectOwner: group.subjectOwner,
+        subjectTime: group.subjectTime,
+        pictureUrl: picture?.profilePictureUrl,
+        size: group.participants.length,
+        creation: group.creation,
+        owner: group.owner,
+        desc: group.desc,
+        descId: group.descId,
+        restrict: group.restrict,
+        announce: group.announce,
+        isCommunity: group.isCommunity,
+        isCommunityAnnounce: group.isCommunityAnnounce,
+        linkedParent: group.linkedParent,
+        isOwner: group.owner === instanceJid, // Flag adicional útil
+      };
+
+      if (getParticipants.getParticipants == 'true') {
+        result['participants'] = group.participants;
+      }
+
+      return result;
+    });
+
+    this.logger.verbose(`Successfully fetched ${groups.length} admin groups with pictures`);
     return groups;
   }
 

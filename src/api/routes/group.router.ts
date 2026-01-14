@@ -96,6 +96,16 @@ export class GroupRouter extends RouterBroker {
 
         res.status(HttpStatus.OK).json(response);
       })
+      .get(this.routerPath('fetchAdminGroups'), ...guards, async (req, res) => {
+        const response = await this.getParticipantsValidate<GetParticipant>({
+          request: req,
+          schema: getParticipantsSchema,
+          ClassRef: GetParticipant,
+          execute: (instance, data) => groupController.fetchAdminGroups(instance, data),
+        });
+
+        res.status(HttpStatus.OK).json(response);
+      })
       .get(this.routerPath('participants'), ...guards, async (req, res) => {
         const response = await this.groupValidate<GroupJid>({
           request: req,
