@@ -4548,95 +4548,183 @@ export class BaileysStartupService extends ChannelStartupService {
   }
 
   public async fetchAdminGroups(getParticipants: GetParticipant) {
-    const fetch = Object.values(await this?.client?.groupFetchAllParticipating());
-    const instanceJidRaw = this.client?.user?.id; // JID de la instancia actual
-
-    if (!instanceJidRaw) {
-      throw new NotFoundException('Instance JID not found');
-    }
-
-    // Limpiar device ID del JID para comparación consistente
-    // WhatsApp puede devolver: "5511999999999:1234567890@s.whatsapp.net"
-    // Lo normalizamos a: "5511999999999@s.whatsapp.net"
-    const instanceJid = instanceJidRaw.replace(/:\d+/, '');
-
-    this.logger.verbose(`Filtering admin groups for ${instanceJid} from ${fetch.length} total groups`);
-
-    // Filtrar solo grupos donde es admin u owner
-    const adminOnlyGroups = fetch.filter((group) => {
-      // Normalizar owner JID para comparación
-      const groupOwner = group.owner?.replace(/:\d+/, '') || group.owner;
-
-      // Es el owner del grupo
-      if (groupOwner === instanceJid) {
-        return true;
-      }
-
-      // Es admin en los participantes
-      if (group.participants && Array.isArray(group.participants)) {
-        const myParticipant = group.participants.find((p) => {
-          // Normalizar JID del participante para comparación
-          const participantJid = p.id?.replace(/:\d+/, '') || p.id;
-          return participantJid === instanceJid;
-        });
-        if (myParticipant && (myParticipant.admin === 'admin' || myParticipant.admin === 'superadmin')) {
-          return true;
-        }
-      }
-
-      return false;
-    });
-
-    this.logger.verbose(`Found ${adminOnlyGroups.length} admin groups out of ${fetch.length} total`);
-
-    // Obtener fotos solo de grupos admin (optimizado con batch)
-    const pictures = await this.processBatchWithDelay(
-      adminOnlyGroups,
-      async (group) => {
-        try {
-          return await this.profilePicture(group.id);
-        } catch {
-          return { profilePictureUrl: null };
-        }
-      },
-      {
-        batchSize: 10,
-        delayBetweenBatches: 300,
-        addJitter: true,
-      },
+    this.logger.log(
+      `[fetchAdminGroups] Starting admin groups fetch - getParticipants: ${getParticipants.getParticipants}`,
     );
 
-    const groups = adminOnlyGroups.map((group, index) => {
-      const picture = pictures[index] || { profilePictureUrl: null };
+    try {
+      // Paso 1: Obtener todos los grupos
+      this.logger.verbose(`[fetchAdminGroups] Step 1: Fetching all groups from WhatsApp...`);
+      const fetch = Object.values(await this?.client?.groupFetchAllParticipating());
+      this.logger.log(`[fetchAdminGroups] Step 1: Retrieved ${fetch.length} total groups from WhatsApp`);
 
-      const result = {
-        id: group.id,
-        subject: group.subject,
-        subjectOwner: group.subjectOwner,
-        subjectTime: group.subjectTime,
-        pictureUrl: picture?.profilePictureUrl,
-        size: group.participants.length,
-        creation: group.creation,
-        owner: group.owner,
-        desc: group.desc,
-        descId: group.descId,
-        restrict: group.restrict,
-        announce: group.announce,
-        isCommunity: group.isCommunity,
-        isCommunityAnnounce: group.isCommunityAnnounce,
-        linkedParent: group.linkedParent,
-        isOwner: group.owner === instanceJid, // Flag adicional útil
-      };
+      // Paso 2: Obtener JID de la instancia
+      this.logger.verbose(`[fetchAdminGroups] Step 2: Getting instance JID...`);
+      const instanceJidRaw = this.client?.user?.id;
 
-      if (getParticipants.getParticipants == 'true') {
-        result['participants'] = group.participants;
+      if (!instanceJidRaw) {
+        this.logger.error(
+          `[fetchAdminGroups] ERROR: Instance JID not found. Client user: ${JSON.stringify(this.client?.user)}`,
+        );
+        throw new NotFoundException('Instance JID not found');
       }
 
-      return result;
-    });
+      this.logger.verbose(`[fetchAdminGroups] Step 2: Raw instance JID: ${instanceJidRaw}`);
 
-    this.logger.verbose(`Successfully fetched ${groups.length} admin groups with pictures`);
-    return groups;
+      // Limpiar device ID del JID para comparación consistente
+      // WhatsApp puede devolver: "5511999999999:1234567890@s.whatsapp.net"
+      // Lo normalizamos a: "5511999999999@s.whatsapp.net"
+      const instanceJid = instanceJidRaw.replace(/:\d+/, '');
+      this.logger.log(`[fetchAdminGroups] Step 2: Normalized instance JID: ${instanceJid} (from ${instanceJidRaw})`);
+
+      // Paso 3: Filtrar grupos admin
+      this.logger.verbose(
+        `[fetchAdminGroups] Step 3: Filtering admin groups for ${instanceJid} from ${fetch.length} total groups...`,
+      );
+
+      let ownerCount = 0;
+      let adminCount = 0;
+      let checkedGroups = 0;
+
+      const adminOnlyGroups = fetch.filter((group) => {
+        checkedGroups++;
+        const groupId = group.id || 'unknown';
+        const groupSubject = group.subject || 'No subject';
+
+        // Normalizar owner JID para comparación
+        const groupOwner = group.owner?.replace(/:\d+/, '') || group.owner;
+
+        // Es el owner del grupo
+        if (groupOwner === instanceJid) {
+          ownerCount++;
+          this.logger.verbose(
+            `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - OWNER match`,
+          );
+          return true;
+        }
+
+        // Es admin en los participantes
+        if (group.participants && Array.isArray(group.participants)) {
+          const myParticipant = group.participants.find((p) => {
+            // Normalizar JID del participante para comparación
+            const participantJid = p.id?.replace(/:\d+/, '') || p.id;
+            return participantJid === instanceJid;
+          });
+
+          if (myParticipant) {
+            const role = myParticipant.admin || 'member';
+            this.logger.verbose(
+              `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - Found participant with role: ${role}`,
+            );
+
+            if (myParticipant.admin === 'admin' || myParticipant.admin === 'superadmin') {
+              adminCount++;
+              this.logger.verbose(
+                `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - ADMIN match (${myParticipant.admin})`,
+              );
+              return true;
+            }
+          } else {
+            this.logger.verbose(
+              `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - Not found in participants (${group.participants.length} participants)`,
+            );
+          }
+        } else {
+          this.logger.verbose(
+            `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - No participants array`,
+          );
+        }
+
+        return false;
+      });
+
+      this.logger.log(
+        `[fetchAdminGroups] Step 3: Filtering complete - Found ${adminOnlyGroups.length} admin groups (${ownerCount} as owner, ${adminCount} as admin) out of ${fetch.length} total`,
+      );
+
+      if (adminOnlyGroups.length === 0) {
+        this.logger.warn(
+          `[fetchAdminGroups] WARNING: No admin groups found. Instance JID: ${instanceJid}, Total groups checked: ${fetch.length}`,
+        );
+        return [];
+      }
+
+      // Paso 4: Obtener fotos de perfil
+      this.logger.verbose(
+        `[fetchAdminGroups] Step 4: Fetching profile pictures for ${adminOnlyGroups.length} admin groups in batches...`,
+      );
+      const startPicturesTime = Date.now();
+
+      const pictures = await this.processBatchWithDelay(
+        adminOnlyGroups,
+        async (group) => {
+          try {
+            return await this.profilePicture(group.id);
+          } catch (error) {
+            this.logger.verbose(`[fetchAdminGroups] Failed to get picture for group ${group.id}: ${error}`);
+            return { profilePictureUrl: null };
+          }
+        },
+        {
+          batchSize: 10,
+          delayBetweenBatches: 300,
+          addJitter: true,
+        },
+      );
+
+      const picturesTime = Date.now() - startPicturesTime;
+      const picturesWithUrl = pictures.filter((p) => p?.profilePictureUrl).length;
+      this.logger.log(
+        `[fetchAdminGroups] Step 4: Profile pictures fetched in ${picturesTime}ms - ${picturesWithUrl}/${adminOnlyGroups.length} groups have pictures`,
+      );
+
+      // Paso 5: Construir respuesta
+      this.logger.verbose(
+        `[fetchAdminGroups] Step 5: Building response with ${getParticipants.getParticipants === 'true' ? 'participants' : 'no participants'}...`,
+      );
+
+      const groups = adminOnlyGroups.map((group, index) => {
+        const picture = pictures[index] || { profilePictureUrl: null };
+
+        const result = {
+          id: group.id,
+          subject: group.subject,
+          subjectOwner: group.subjectOwner,
+          subjectTime: group.subjectTime,
+          pictureUrl: picture?.profilePictureUrl,
+          size: group.participants.length,
+          creation: group.creation,
+          owner: group.owner,
+          desc: group.desc,
+          descId: group.descId,
+          restrict: group.restrict,
+          announce: group.announce,
+          isCommunity: group.isCommunity,
+          isCommunityAnnounce: group.isCommunityAnnounce,
+          linkedParent: group.linkedParent,
+          isOwner: group.owner?.replace(/:\d+/, '') === instanceJid,
+        };
+
+        if (getParticipants.getParticipants == 'true') {
+          result['participants'] = group.participants;
+          this.logger.verbose(
+            `[fetchAdminGroups] Group "${group.subject}" (${group.id}) - Including ${group.participants.length} participants`,
+          );
+        }
+
+        return result;
+      });
+
+      this.logger.log(
+        `[fetchAdminGroups] SUCCESS: Returning ${groups.length} admin groups (${ownerCount} as owner, ${adminCount} as admin) with ${getParticipants.getParticipants === 'true' ? 'participants' : 'no participants'}`,
+      );
+
+      return groups;
+    } catch (error) {
+      this.logger.error(`[fetchAdminGroups] ERROR: Failed to fetch admin groups - ${error.message}`);
+      this.logger.error(`[fetchAdminGroups] ERROR Stack: ${error.stack}`);
+      throw error;
+    }
   }
 
   public async inviteCode(id: GroupJid) {
