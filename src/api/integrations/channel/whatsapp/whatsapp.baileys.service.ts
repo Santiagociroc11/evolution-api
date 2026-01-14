@@ -4549,24 +4549,36 @@ export class BaileysStartupService extends ChannelStartupService {
 
   public async fetchAdminGroups(getParticipants: GetParticipant) {
     const fetch = Object.values(await this?.client?.groupFetchAllParticipating());
-    const instanceJid = this.client?.user?.id; // JID de la instancia actual
+    const instanceJidRaw = this.client?.user?.id; // JID de la instancia actual
 
-    if (!instanceJid) {
+    if (!instanceJidRaw) {
       throw new NotFoundException('Instance JID not found');
     }
+
+    // Limpiar device ID del JID para comparación consistente
+    // WhatsApp puede devolver: "5511999999999:1234567890@s.whatsapp.net"
+    // Lo normalizamos a: "5511999999999@s.whatsapp.net"
+    const instanceJid = instanceJidRaw.replace(/:\d+/, '');
 
     this.logger.verbose(`Filtering admin groups for ${instanceJid} from ${fetch.length} total groups`);
 
     // Filtrar solo grupos donde es admin u owner
     const adminOnlyGroups = fetch.filter((group) => {
+      // Normalizar owner JID para comparación
+      const groupOwner = group.owner?.replace(/:\d+/, '') || group.owner;
+
       // Es el owner del grupo
-      if (group.owner === instanceJid) {
+      if (groupOwner === instanceJid) {
         return true;
       }
 
       // Es admin en los participantes
       if (group.participants && Array.isArray(group.participants)) {
-        const myParticipant = group.participants.find((p) => p.id === instanceJid);
+        const myParticipant = group.participants.find((p) => {
+          // Normalizar JID del participante para comparación
+          const participantJid = p.id?.replace(/:\d+/, '') || p.id;
+          return participantJid === instanceJid;
+        });
         if (myParticipant && (myParticipant.admin === 'admin' || myParticipant.admin === 'superadmin')) {
           return true;
         }
