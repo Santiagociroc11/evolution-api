@@ -4649,8 +4649,13 @@ export class BaileysStartupService extends ChannelStartupService {
           }
 
           const myParticipant = group.participants.find((p) => {
-            // Normalizar JID del participante
-            const participantJid = p.id?.replace(/:\d+/, '') || p.id;
+            // IMPORTANTE: Los participantes tienen 'id' (LID) y 'phoneNumber' (JID real)
+            // Usamos phoneNumber para comparar, no id
+            const participantJidRaw = p.phoneNumber || p.id;
+            if (!participantJidRaw) return false;
+
+            // Normalizar JID del participante (remover device ID si existe)
+            const participantJid = participantJidRaw.replace(/:\d+/, '');
 
             // Comparación exacta primero
             if (participantJid === instanceJid) {
@@ -4672,11 +4677,12 @@ export class BaileysStartupService extends ChannelStartupService {
 
           if (myParticipant) {
             const role = myParticipant.admin || 'member';
-            const participantJid = myParticipant.id?.replace(/:\d+/, '') || myParticipant.id;
+            const participantJidRaw = myParticipant.phoneNumber || myParticipant.id;
+            const participantJid = participantJidRaw?.replace(/:\d+/, '') || participantJidRaw;
             const matchType = participantJid === instanceJid ? 'exact' : 'flexible (last 10 digits)';
 
             this.logger.verbose(
-              `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - Found participant (${matchType}) with role: ${role}`,
+              `[fetchAdminGroups] Group ${checkedGroups}/${fetch.length}: "${groupSubject}" (${groupId}) - Found participant (${matchType}) with role: ${role}, phoneNumber: ${participantJidRaw}`,
             );
 
             if (myParticipant.admin === 'admin' || myParticipant.admin === 'superadmin') {
